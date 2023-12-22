@@ -1,9 +1,4 @@
 using Moq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using ItemStore.WebApi.Interfaces;
 using ItemStore.WebApi.Services;
 using AutoMapper;
@@ -55,8 +50,8 @@ namespace ItemStore.UnitTests.Services
             // Arrange
             var testItems = new List<Item>
             {
-                new Item { Id = 1, /* other properties */ },
-                new Item { Id = 2, /* other properties */ }
+                new Item { Id = 1, Name = "Name", Price = 1 },
+                new Item { Id = 2, Name = "Name", Price = 1 }
             };
 
             var configuration = new MapperConfiguration(cfg =>
@@ -222,13 +217,5 @@ namespace ItemStore.UnitTests.Services
             // Act & Assert
             await Assert.ThrowsAsync<ItemNotFoundException>(() => itemService.Delete(invalidId));
         }
-
-
-
-
-
-
-
-
     }
 }
