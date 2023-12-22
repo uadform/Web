@@ -49,7 +49,6 @@ namespace ItemStore.WebApi.Repositories
             };
             _connection.Execute(sql, queryArguments);
         }
-
         public void Delete(Item item)
         {
            _connection.Execute("DELETE FROM itemstore WHERE Id = @id", new { item.Id });
