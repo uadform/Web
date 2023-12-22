@@ -1,0 +1,6 @@
+﻿.response {
+    background-color: green;
+}
+.response .microlight {
+    background-color: lightgreen; /* You can adjust the shade of green as needed */
+}
