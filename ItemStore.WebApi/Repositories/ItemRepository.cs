@@ -36,6 +36,7 @@ namespace ItemStore.WebApi.Repositories
             };
             _connection.Execute(sql, queryArguments);
         }
+
         public void EditItem(Item item)
         {
 
