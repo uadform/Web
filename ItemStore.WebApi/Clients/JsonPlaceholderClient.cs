@@ -26,7 +26,7 @@ namespace ItemStore.WebApi.Clients
             var user = await response.Content.ReadAsAsync<UserDTO>();
             return user;
         }
-        public async Task<UserDTO> AddUser(UserDTO user)
+        public async Task<UserDTO> AddUser(createUserDTO user)
         {
             var jsonContent = new StringContent(JsonSerializer.Serialize(user), Encoding.UTF8, "application/json");
             var response = await _httpClient.PostAsync("https://jsonplaceholder.typicode.com/users", jsonContent);

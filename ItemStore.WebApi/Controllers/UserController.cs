@@ -31,14 +31,14 @@ namespace ItemStore.WebApi.Controllers
                 return Ok(user);
         }
         [HttpPost]
-        public async Task<IActionResult>CreateUser(UserDTO newUser)
+        public async Task<IActionResult> CreateUser(createUserDTO newUser)
         {
             var user = await _client.AddUser(newUser);
             if (user == null)
             {
                 return BadRequest();
             }
-            return CreatedAtAction(nameof(GetById), new { id = newUser.Id }, newUser);
+            return CreatedAtAction(nameof(GetById), new { id = user.Id }, user);
         }
     }
 }
