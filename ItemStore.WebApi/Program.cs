@@ -6,6 +6,7 @@ using ItemStore.WebApi.Repositories;
 using ItemStore.WebApi.Contexts;
 using Microsoft.EntityFrameworkCore;
 using ItemStore.WebApi.Middlewares;
+using ItemStore.WebApi.Clients;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,6 +26,10 @@ builder.Services.AddDbContext<DataContext>(o => o.UseNpgsql(connectionString));
 builder.Services.AddTransient<IItemService, ItemService>();
 builder.Services.AddTransient<IEFCoreRepository, EFCoreRepository>();
 builder.Services.AddAutoMapper(typeof(Program));
+
+builder.Services.AddTransient<JsonPlaceholderClient>();
+
+builder.Services.AddHttpClient();
 var app = builder.Build();
 app.UseSwaggerUI(c =>
 {

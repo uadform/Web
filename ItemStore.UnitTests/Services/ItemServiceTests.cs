@@ -7,70 +7,74 @@ using FluentAssertions;
 using ItemStore.WebApi.Exceptions;
 using ItemStore.WebApi.Model.Entities;
 using ItemStore.WebApi.Model.DTO;
+using System.Runtime.CompilerServices;
+using System.Configuration;
+using FluentAssertions.Common;
+using AutoFixture;
+using AutoFixture.Xunit2;
 
 namespace ItemStore.UnitTests.Services
 {
     public class ItemServiceTests
     {
-        [Fact]
-        public async Task Get_GivenValidId_ReturnsDto()
+        private readonly ItemService _itemService;
+        private readonly Mock<IEFCoreRepository> _itemRepositoryMock;
+        private readonly IMapper _mapper;
+        private readonly Fixture _fixture;
+
+        public ItemServiceTests()
         {
-            int id = 1;
+            _itemRepositoryMock = new Mock<IEFCoreRepository>();
             var configuration = new MapperConfiguration(cfg =>
             {
                 cfg.AddProfile<AutoMapperProfile>();
             });
-            var mapper = configuration.CreateMapper();
-            var testRepository = new Mock<IEFCoreRepository>();
-            testRepository.Setup(m => m.Get(id)).ReturnsAsync(new WebApi.Model.Entities.Item()
+            _mapper = configuration.CreateMapper();
+
+            _itemService = new ItemService(_itemRepositoryMock.Object, _mapper);
+            _fixture = new Fixture();
+        }
+
+        [Fact]
+        public async Task Get_GivenValidId_ReturnsDto()
+        {
+            // Arrange
+            int id = _fixture.Create<int>();
+            _itemRepositoryMock.Setup(m => m.Get(id)).ReturnsAsync(new Item()
             {
                 Id = id,
             });
-            var itemService = new ItemService(testRepository.Object, mapper);
-            var result = await itemService.Get(id);
+            // Act Assert
+            var result = await _itemService.Get(id);
             result.Id.Should().Be(id);
         }
         [Fact]
         public async Task Get_GivenValidId_ReturnsItemNotFoundException()
         {
-            int id = 1;
-            var configuration = new MapperConfiguration(cfg =>
-            {
-                cfg.AddProfile<AutoMapperProfile>();
-            });
-            var mapper = configuration.CreateMapper();
-            var testRepository = new Mock<IEFCoreRepository>();
-            testRepository.Setup(m => m.Get(id)).Returns(Task.FromResult<Item>(null));
-            var itemService = new ItemService(testRepository.Object, mapper);
-            await Assert.ThrowsAsync<ItemNotFoundException>(async () => await itemService.Get(id));
-        }
-        [Fact]
-        public async Task GetAllItems_WhenCalled_ReturnsAllItems()
-        {
             // Arrange
-            var testItems = new List<Item>
-            {
-                new Item { Id = 1, Name = "Name", Price = 1 },
-                new Item { Id = 2, Name = "Name", Price = 1 }
-            };
-
-            var configuration = new MapperConfiguration(cfg =>
-            {
-                cfg.AddProfile<AutoMapperProfile>();
-            });
-            var mapper = configuration.CreateMapper();
-
-            var testRepository = new Mock<IEFCoreRepository>();
-            testRepository.Setup(m => m.Get()).ReturnsAsync(testItems);
-
-            var itemService = new ItemService(testRepository.Object, mapper);
+            int id = _fixture.Create<int>();
+            _itemRepositoryMock.Setup(m => m.Get(id)).Returns(Task.FromResult<Item>(null));
 
             // Act
-            var result = await itemService.Get();
+            Func<Task> act = async () => await _itemService.Get(id);
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Equal(testItems.Count, result.Count());
+            await act.Should().ThrowAsync<ItemNotFoundException>();
+        }
+
+        [Theory]
+        [AutoData]
+        public async Task GetAllItems_WhenCalled_ReturnsAllItems(List<Item> testItems)
+        {
+            // Arrange
+            _itemRepositoryMock.Setup(m => m.Get()).ReturnsAsync(testItems);
+
+            // Act
+            var result = await _itemService.Get();
+
+            // Assert
+            result.Should().NotBeNull();
+            testItems.Count.Should().Be(result.Count());
         }
         [Fact]
         public async Task GetAllItems_WhenNoItems_ReturnsEmptyException()
@@ -78,43 +82,26 @@ namespace ItemStore.UnitTests.Services
             // Arrange
             var testItems = new List<Item>(); // Empty list
 
-            var configuration = new MapperConfiguration(cfg =>
-            {
-                cfg.AddProfile<AutoMapperProfile>();
-            });
-            var mapper = configuration.CreateMapper();
-
-            var testRepository = new Mock<IEFCoreRepository>();
-            testRepository.Setup(m => m.Get()).ReturnsAsync(testItems);
-
-            var itemService = new ItemService(testRepository.Object, mapper);
-
-            // Act & Assert
-            await Assert.ThrowsAsync<ItemListEmptyException>(() => itemService.Get());
-        }
-        [Fact]
-        public async Task CreateAnItem_WhenCalled_MakesRepositoryCreateWithMappedItem()
-        {
-            var itemDTO = new ItemDTO() { Name = "Name", Price = 5 }; // Populate with valid data if necessary
-
-            var configuration = new MapperConfiguration(cfg =>
-            {
-                cfg.AddProfile<AutoMapperProfile>();
-            });
-            var mapper = configuration.CreateMapper();
-
-            var testRepository = new Mock<IEFCoreRepository>();
-            testRepository.Setup(m => m.Create(It.IsAny<Item>()))
-                          .Returns(Task.CompletedTask)
-                          .Verifiable(); // Important to make sure this method is called
-
-            var itemService = new ItemService(testRepository.Object, mapper);
+            _itemRepositoryMock.Setup(m => m.Get()).ReturnsAsync(testItems);
 
             // Act
-            await itemService.Create(itemDTO);
+            Func<Task> act = async () => await _itemService.Get();
 
             // Assert
-            testRepository.Verify(m => m.Create(It.Is<Item>(item => item.Name == itemDTO.Name && item.Price == itemDTO.Price)), Times.AtLeastOnce());
+            await act.Should().ThrowAsync<ItemListEmptyException>();
+        }
+        [Theory]
+        [AutoData]
+        public async Task CreateAnItem_WhenCalled_MakesRepositoryCreateWithMappedItem(ItemDTO itemDTO)
+        {
+            _itemRepositoryMock.Setup(m => m.Create(It.IsAny<Item>()))
+                          .Returns(Task.CompletedTask)
+                          .Verifiable(); // Important to make sure this method is called
+            // Act
+            await _itemService.Create(itemDTO);
+
+            // Assert
+            _itemRepositoryMock.Verify(m => m.Create(It.Is<Item>(item => item.Name == itemDTO.Name && item.Price == itemDTO.Price)), Times.AtLeastOnce());
         }
         [Theory]
         [InlineData("Name1", 5, 1)] // Example data set 1
@@ -125,79 +112,51 @@ namespace ItemStore.UnitTests.Services
             var validItemDTO = new ItemDTO { Name = name, Price = price };
             var existingItem = new Item { Id = validId, Name = name, Price = price };
 
-            var configuration = new MapperConfiguration(cfg =>
-            {
-                cfg.AddProfile<AutoMapperProfile>();
-            });
-            var mapper = configuration.CreateMapper();
-
-            var testRepository = new Mock<IEFCoreRepository>();
-            testRepository.Setup(m => m.Get(validId)).ReturnsAsync(existingItem);
-            testRepository.Setup(m => m.EditItem(It.IsAny<Item>()))
+            _itemRepositoryMock.Setup(m => m.Get(validId)).ReturnsAsync(existingItem);
+            _itemRepositoryMock.Setup(m => m.EditItem(It.IsAny<Item>()))
                           .Returns(Task.CompletedTask)
                           .Verifiable();
 
-            var itemService = new ItemService(testRepository.Object, mapper);
-
             // Act
-            await itemService.EditItem(validItemDTO, validId);
+            await _itemService.EditItem(validItemDTO, validId);
 
             // Assert
-            testRepository.Verify(m => m.EditItem(It.Is<Item>(item =>
+            _itemRepositoryMock.Verify(m => m.EditItem(It.Is<Item>(item =>
                 item.Id == validId &&
                 item.Name == validItemDTO.Name &&
                 item.Price == validItemDTO.Price)), Times.Once);
         }
+
         [Theory]
-        [InlineData(-1)] // Example invalid ID 1
-        [InlineData(0)]  // Example invalid ID 2
-        public async Task EditItem_WithInvalidId_ThrowsItemNotFoundException(int invalidId)
+        [InlineAutoData(-1)]
+        [InlineAutoData(0)]
+        public async Task EditItem_WithInvalidId_ThrowsItemNotFoundException(int invalidId, ItemDTO itemDTO)
         {
             // Arrange
-            var itemDTO = new ItemDTO {Name = "Name", Price = 1};
-
-            var configuration = new MapperConfiguration(cfg =>
-            {
-                cfg.AddProfile<AutoMapperProfile>();
-            });
-            var mapper = configuration.CreateMapper();
-
-            var testRepository = new Mock<IEFCoreRepository>();
-            // Explicitly indicating the nullable return type
-            testRepository.Setup(m => m.Get(invalidId)).ReturnsAsync((Item?)null);
-
-            var itemService = new ItemService(testRepository.Object, mapper);
-
-            // Act & Assert
-            await Assert.ThrowsAsync<ItemNotFoundException>(() => itemService.EditItem(itemDTO, invalidId));
-        }
-        [Fact]
-        public async Task Delete_WithValidId_DeletesRepositoryItem()
-        {
-            // Arrange
-            int validId = 1;
-            string name = "Name";
-            decimal price = 5;
-            var existingItem = new Item { Id = validId, Name = name, Price = price};
-
-            var testRepository = new Mock<IEFCoreRepository>();
-            testRepository.Setup(m => m.Get(validId)).ReturnsAsync(existingItem);
-            testRepository.Setup(m => m.Delete(It.IsAny<Item>()))
-                          .Returns(Task.CompletedTask)
-                          .Verifiable();
-            var configuration = new MapperConfiguration(cfg =>
-            {
-                cfg.AddProfile<AutoMapperProfile>();
-            });
-            var mapper = configuration.CreateMapper();
-
-            var itemService = new ItemService(testRepository.Object, mapper);
+            _itemRepositoryMock.Setup(m => m.Get(It.IsAny<int>())).ReturnsAsync((int id) => id < 1 ? null : new Item());
 
             // Act
-            await itemService.Delete(validId);
+            Func<Task> act = async () => await _itemService.EditItem(itemDTO, invalidId);
 
             // Assert
-            testRepository.Verify(m => m.Delete(It.Is<Item>(item => item.Id == validId)), Times.Once);
+            await act.Should().ThrowAsync<ItemNotFoundException>();
+        }
+        [Theory]
+        [AutoData]
+        public async Task Delete_WithValidId_DeletesRepositoryItem(int validId, string name, decimal price)
+        {
+            // Arrange
+            var existingItem = new Item { Id = validId, Name = name, Price = price};
+
+            _itemRepositoryMock.Setup(m => m.Get(validId)).ReturnsAsync(existingItem);
+            _itemRepositoryMock.Setup(m => m.Delete(It.IsAny<Item>()))
+                          .Returns(Task.CompletedTask)
+                          .Verifiable();
+            // Act
+            await _itemService.Delete(validId);
+
+            // Assert
+            _itemRepositoryMock.Verify(m => m.Delete(It.Is<Item>(item => item.Id == validId)), Times.Once);
         }
         [Fact]
         public async Task Delete_WithInvalidId_ThrowsItemNotFoundException()
@@ -205,17 +164,12 @@ namespace ItemStore.UnitTests.Services
             // Arrange
             int invalidId = -1;
 
-            var testRepository = new Mock<IEFCoreRepository>();
-            testRepository.Setup(m => m.Get(invalidId)).ReturnsAsync((Item)null);
-            var configuration = new MapperConfiguration(cfg =>
-            {
-                cfg.AddProfile<AutoMapperProfile>();
-            });
-            var mapper = configuration.CreateMapper();
-            var itemService = new ItemService(testRepository.Object, mapper);
+            _itemRepositoryMock.Setup(m => m.Get(invalidId)).ReturnsAsync((Item)null);
+            // Act
+            Func<Task> act = async () => await _itemService.Delete(invalidId);
 
-            // Act & Assert
-            await Assert.ThrowsAsync<ItemNotFoundException>(() => itemService.Delete(invalidId));
+            // Assert
+            await act.Should().ThrowAsync<ItemNotFoundException>();
         }
     }
 }
