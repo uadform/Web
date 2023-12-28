@@ -35,11 +35,11 @@ namespace ItemStore.UnitTests.Services
             _fixture = new Fixture();
         }
 
-        [Fact]
-        public async Task Get_GivenValidId_ReturnsDto()
+        [Theory]
+        [AutoData]
+        public async Task Get_GivenValidId_ReturnsDto(int id)
         {
             // Arrange
-            int id = _fixture.Create<int>();
             _itemRepositoryMock.Setup(m => m.Get(id)).ReturnsAsync(new Item()
             {
                 Id = id,
@@ -48,11 +48,12 @@ namespace ItemStore.UnitTests.Services
             var result = await _itemService.Get(id);
             result.Id.Should().Be(id);
         }
-        [Fact]
-        public async Task Get_GivenValidId_ReturnsItemNotFoundException()
+
+        [Theory]
+        [AutoData]
+        public async Task Get_GivenValidId_ReturnsItemNotFoundException(int id)
         {
             // Arrange
-            int id = _fixture.Create<int>();
             _itemRepositoryMock.Setup(m => m.Get(id)).Returns(Task.FromResult<Item>(null));
 
             // Act
@@ -76,13 +77,11 @@ namespace ItemStore.UnitTests.Services
             result.Should().NotBeNull();
             testItems.Count.Should().Be(result.Count());
         }
+
         [Fact]
         public async Task GetAllItems_WhenNoItems_ReturnsEmptyException()
         {
-            // Arrange
-            var testItems = new List<Item>(); // Empty list
-
-            _itemRepositoryMock.Setup(m => m.Get()).ReturnsAsync(testItems);
+            _itemRepositoryMock.Setup(m => m.Get()).ReturnsAsync(new List<Item>());
 
             // Act
             Func<Task> act = async () => await _itemService.Get();
@@ -90,50 +89,49 @@ namespace ItemStore.UnitTests.Services
             // Assert
             await act.Should().ThrowAsync<ItemListEmptyException>();
         }
+
         [Theory]
         [AutoData]
         public async Task CreateAnItem_WhenCalled_MakesRepositoryCreateWithMappedItem(ItemDTO itemDTO)
         {
             _itemRepositoryMock.Setup(m => m.Create(It.IsAny<Item>()))
-                          .Returns(Task.CompletedTask)
-                          .Verifiable(); // Important to make sure this method is called
+                          .Returns(Task.CompletedTask);
             // Act
             await _itemService.Create(itemDTO);
 
             // Assert
-            _itemRepositoryMock.Verify(m => m.Create(It.Is<Item>(item => item.Name == itemDTO.Name && item.Price == itemDTO.Price)), Times.AtLeastOnce());
+            _itemRepositoryMock.Verify(m => m.Create(It.Is<Item>(item => item.Name == itemDTO.Name 
+            && item.Price == itemDTO.Price)), Times.Once());
         }
+
         [Theory]
-        [InlineData("Name1", 5, 1)] // Example data set 1
-        [InlineData("Name2", 10, 2)] // Example data set 2
-        public async Task EditItem_WithValidItem_EditsRepositoryItem(string name, decimal price, int validId)
+        [AutoData]
+        public async Task EditItem_WithValidItem_EditsRepositoryItem(Item existingItem)
         {
             // Arrange
-            var validItemDTO = new ItemDTO { Name = name, Price = price };
-            var existingItem = new Item { Id = validId, Name = name, Price = price };
+            var validItemDTO = new ItemDTO { Name = existingItem.Name, Price = existingItem.Price };
 
-            _itemRepositoryMock.Setup(m => m.Get(validId)).ReturnsAsync(existingItem);
+            _itemRepositoryMock.Setup(m => m.Get(existingItem.Id)).ReturnsAsync(existingItem);
             _itemRepositoryMock.Setup(m => m.EditItem(It.IsAny<Item>()))
-                          .Returns(Task.CompletedTask)
-                          .Verifiable();
+                          .Returns(Task.CompletedTask);
 
             // Act
-            await _itemService.EditItem(validItemDTO, validId);
+            await _itemService.EditItem(validItemDTO, existingItem.Id);
 
             // Assert
             _itemRepositoryMock.Verify(m => m.EditItem(It.Is<Item>(item =>
-                item.Id == validId &&
+                item.Id == existingItem.Id &&
                 item.Name == validItemDTO.Name &&
                 item.Price == validItemDTO.Price)), Times.Once);
         }
 
         [Theory]
-        [InlineAutoData(-1)]
-        [InlineAutoData(0)]
-        public async Task EditItem_WithInvalidId_ThrowsItemNotFoundException(int invalidId, ItemDTO itemDTO)
+        [AutoData]
+        public async Task EditItem_WithInvalidId_ThrowsItemNotFoundException(int invalidId)
         {
             // Arrange
-            _itemRepositoryMock.Setup(m => m.Get(It.IsAny<int>())).ReturnsAsync((int id) => id < 1 ? null : new Item());
+            var itemDTO = new ItemDTO(); // Provide valid itemDTO for your test
+            _itemRepositoryMock.Setup(m => m.Get(invalidId)).Returns(Task.FromResult<Item>(null!));
 
             // Act
             Func<Task> act = async () => await _itemService.EditItem(itemDTO, invalidId);
@@ -141,35 +139,37 @@ namespace ItemStore.UnitTests.Services
             // Assert
             await act.Should().ThrowAsync<ItemNotFoundException>();
         }
+
         [Theory]
         [AutoData]
-        public async Task Delete_WithValidId_DeletesRepositoryItem(int validId, string name, decimal price)
+        public async Task Delete_WithValidId_DeletesRepositoryItem(Item existingItem)
         {
             // Arrange
-            var existingItem = new Item { Id = validId, Name = name, Price = price};
 
-            _itemRepositoryMock.Setup(m => m.Get(validId)).ReturnsAsync(existingItem);
+            _itemRepositoryMock.Setup(m => m.Get(existingItem.Id)).ReturnsAsync(existingItem);
             _itemRepositoryMock.Setup(m => m.Delete(It.IsAny<Item>()))
                           .Returns(Task.CompletedTask)
                           .Verifiable();
             // Act
-            await _itemService.Delete(validId);
+            await _itemService.Delete(existingItem.Id);
 
             // Assert
-            _itemRepositoryMock.Verify(m => m.Delete(It.Is<Item>(item => item.Id == validId)), Times.Once);
+            _itemRepositoryMock.Verify(m => m.Delete(It.Is<Item>(item => item.Id == existingItem.Id)), Times.Once);
         }
-        [Fact]
-        public async Task Delete_WithInvalidId_ThrowsItemNotFoundException()
+
+        [Theory]
+        [AutoData]
+        public async Task Delete_WithInvalidId_ThrowsItemNotFoundException(int invalidId)
         {
             // Arrange
-            int invalidId = -1;
-
-            _itemRepositoryMock.Setup(m => m.Get(invalidId)).ReturnsAsync((Item)null);
+            _itemRepositoryMock.Setup(m => m.Get(invalidId)).ReturnsAsync((Item)null!);
             // Act
             Func<Task> act = async () => await _itemService.Delete(invalidId);
 
             // Assert
             await act.Should().ThrowAsync<ItemNotFoundException>();
+            _itemRepositoryMock.Verify(m => m.Get(invalidId), Times.Once);
+            _itemRepositoryMock.Verify(m => m.Delete(It.IsAny<Item>()), Times.Never);
         }
     }
 }

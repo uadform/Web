@@ -42,6 +42,9 @@ namespace ItemStore.WebApi.Middlewares
                         // not found error
                         response.StatusCode = (int)HttpStatusCode.NotFound;
                         break;
+                    case UserNotFoundException e:
+                        response.StatusCode= (int)HttpStatusCode.NotFound;
+                        break;
                     default:
                         // unhandled error
                         _logger.LogError(error, error.Message);

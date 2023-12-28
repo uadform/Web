@@ -47,30 +47,5 @@ namespace ItemStore.WebApi.Services
             if (entity == null) throw new ItemNotFoundException();
             await _itemRepository.Delete(entity);
         }
-        //public int DeleteItem(int id)
-        //{
-        //    return _itemRepository.DeleteItemById(id);
-        //}
-        //public decimal Buy(int id, int quantity)
-        //{
-        //    if (GetItemsByID(id) != null)
-        //    {
-        //        Item item = GetItemsByID(id);
-
-        //        if (quantity >= 20)
-        //        {
-        //            item.Price = item.Price * 0.8m * quantity;
-
-        //        }
-        //        else if (quantity >= 10)
-        //        {
-        //            item.Price = item.Price * 0.9m * quantity;
-
-        //        }
-        //        else return item.Price = item.Price * quantity;
-        //        return item.Price;
-        //    }
-        //    return 0;
-        //}
     }
 }

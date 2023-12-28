@@ -2,6 +2,6 @@
 {
     public class createUserDTO
     {
-        public string Name { get; set; }
+        public string ?Name { get; set; }
     }
 }

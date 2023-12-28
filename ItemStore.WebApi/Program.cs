@@ -25,6 +25,7 @@ builder.Services.AddDbContext<DataContext>(o => o.UseNpgsql(connectionString));
 
 builder.Services.AddTransient<IItemService, ItemService>();
 builder.Services.AddTransient<IEFCoreRepository, EFCoreRepository>();
+builder.Services.AddTransient<UserService>();
 builder.Services.AddAutoMapper(typeof(Program));
 
 builder.Services.AddTransient<JsonPlaceholderClient>();
