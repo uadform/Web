@@ -5,59 +5,62 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 using ItemStore.WebApi.Model.Entities;
 using ItemStore.WebApi.Contexts;
 using System.Collections.Generic;
+using Microsoft.EntityFrameworkCore;
 
 namespace ItemStore.WebApi.Repositories
 {
     public class ItemRepository : IItemRepository
     {
-        private readonly IDbConnection _connection;
-        public ItemRepository(IDbConnection connection)
+        private readonly DataContext _context;
+
+        public ItemRepository(DataContext context)
         {
-            _connection = connection;
+            _context = context;
         }
-        public Item? Get(int id)
+
+        public async Task<IEnumerable<Item>> GetAllItemsAsync()
         {
-            var parameters = new { id };
-            var record = _connection.QueryFirstOrDefault<Item>("SELECT * FROM itemstore WHERE Id = @id", parameters);
-            return record;
+            return await _context.Items.ToListAsync();
         }
-        public List<Item> Get()
+
+        public async Task<Item> GetItemByIdAsync(int id)
         {
-            var list = _connection.Query<Item>("SELECT id, name, price FROM itemstore");
-            return (List<Item>)list;
+            return await _context.Items.FindAsync(id);
         }
-        public void Create(Item item)
+
+        public async Task<Item> CreateItemAsync(Item item)
         {
-            string sql = $"INSERT INTO itemstore (Name, Price) VALUES (@name, @price)";
-            var queryArguments = new
+            _context.Items.Add(item);
+
+            if (item.ShopId.HasValue)
             {
-                name = item.Name,
-                price = item.Price,
-            };
-            _connection.Execute(sql, queryArguments);
+                var shop = await _context.Shops
+                                         .Include(s => s.Items)
+                                         .FirstOrDefaultAsync(s => s.Id == item.ShopId.Value);
+                if (shop != null)
+                {
+                    shop.Items.Add(item);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return item;
         }
 
-        public void EditItem(Item item)
+        public async Task UpdateItemAsync(Item item)
         {
+            _context.Entry(item).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+        }
 
-            string sql = $"UPDATE itemstore SET name = @name, price = @price WHERE Id = @id";
-            var queryArguments = new
+        public async Task DeleteItemAsync(int id)
+        {
+            var item = await GetItemByIdAsync(id);
+            if (item != null)
             {
-                id = item.Id,
-                name = item.Name,
-                price = item.Price,
-            };
-            _connection.Execute(sql, queryArguments);
+                _context.Items.Remove(item);
+                await _context.SaveChangesAsync();
+            }
         }
-
-        public void Delete(Item item)
-        {
-           _connection.Execute("DELETE FROM itemstore WHERE Id = @id", new { item.Id });
-        }
-        public decimal Buy(int id)
-        {
-            return _connection.Execute("SELECT * FROM itemstore WHERE Id = @id");
-        }
-
     }
 }

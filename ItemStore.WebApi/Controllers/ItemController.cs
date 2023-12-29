@@ -8,53 +8,52 @@ using Microsoft.AspNetCore.Mvc;
 namespace ItemStore.WebApi.Controllers
 {
     [ApiController]
-    [Route("Item")]
+    [Route("[controller]")]
     public class ItemController : ControllerBase
     {
         private readonly IItemService _itemService;
 
-        public ItemController(IItemService itemService, IMapper mapper)
+        public ItemController(IItemService itemService)
         {
             _itemService = itemService;
         }
-        [HttpGet("{id:int}")]
-        public async Task <ActionResult> Get(int id)
+
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<ItemDTO>>> GetAllItems()
         {
-            var item = await _itemService.Get(id);
+            var items = await _itemService.GetAllItemsAsync();
+            return Ok(items);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<ItemDTO>> GetItem(int id)
+        {
+            var item = await _itemService.GetItemByIdAsync(id);
+            if (item == null) return NotFound();
 
             return Ok(item);
         }
-        [HttpGet]
-        public async Task<IActionResult> GetItems()
-        {
-            IEnumerable<Item> itemsList =  await _itemService.Get();
-            return Ok(itemsList);
-        }
-        [HttpPost]
-        public async Task <ActionResult> CreateItem(ItemDTO item)
-        {
-            await _itemService.Create(item);
-            return NoContent();
-        }
-        [HttpPut("{id:int}")]
-        public async Task<ActionResult> EditItem(ItemDTO item, int id)
-        {
-            await _itemService.EditItem(item, id);
-            return NoContent();
-        }
-        [HttpDelete("{id:int}")]
-        public async Task <ActionResult> Delete(int id)
-        {
-            await _itemService.Delete(id);
-            return NoContent();
-        }
-        //[HttpGet("{id}/buy")]
-        //public IActionResult BuyItem(int id, [FromQuery] int quantity)
-        //{
-        //    var item = _itemService.Buy(id, quantity);
-        //    return Ok(item);
-        //}
-    }
 
+        [HttpPost]
+        public async Task<ActionResult<ItemDTO>> CreateItem([FromBody] ItemDTO itemDto)
+        {
+            var newItem = await _itemService.CreateItemAsync(itemDto);
+            return CreatedAtAction(nameof(GetItem), new { id = newItem.ShopId }, newItem);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateItem(int id, [FromBody] ItemDTO itemDto)
+        {
+            await _itemService.UpdateItemAsync(id, itemDto);
+            return NoContent();
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteItem(int id)
+        {
+            await _itemService.DeleteItemAsync(id);
+            return NoContent();
+        }
+    }
 }
 

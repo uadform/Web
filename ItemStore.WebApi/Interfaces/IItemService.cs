@@ -5,11 +5,10 @@ namespace ItemStore.WebApi.Interfaces
 {
     public interface IItemService
     {
-        public Task <Item> Get(int id);
-        public Task<IEnumerable<Item>> Get();
-        public Task Create(ItemDTO itemDTO);
-        public Task EditItem(ItemDTO itemDTO, int id);
-        public Task Delete(int id);
-        //public decimal Buy(int id, int quantity);
+        Task<IEnumerable<Item>> GetAllItemsAsync();
+        Task<ItemDTO> GetItemByIdAsync(int id);
+        Task<ItemDTO> CreateItemAsync(ItemDTO itemDto);
+        Task UpdateItemAsync(int id, ItemDTO itemDto);
+        Task DeleteItemAsync(int id);
     }
 }

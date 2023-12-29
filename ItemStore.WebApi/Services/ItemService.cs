@@ -10,42 +10,74 @@ namespace ItemStore.WebApi.Services
 {
     public class ItemService : IItemService
     {
-        private readonly IEFCoreRepository _itemRepository;
-        private readonly IMapper _mapper;
-        public ItemService(IEFCoreRepository itemRepository, IMapper mapper)
+        private readonly IItemRepository _itemRepository;
+
+        public ItemService(IItemRepository itemRepository)
         {
             _itemRepository = itemRepository;
-            _mapper = mapper;
         }
-        public async Task<Item> Get(int id)
+
+        public async Task<IEnumerable<Item>> GetAllItemsAsync()
         {
-            var entity = await _itemRepository.Get(id);
-            if (entity == null) throw new ItemNotFoundException();
-            return entity;
+            var items = await _itemRepository.GetAllItemsAsync();
+            return items.Select(i => new Item
+            {
+                Id = i.Id,
+                Name = i.Name,
+                Price = i.Price,
+                ShopId = i.ShopId
+            });
         }
-        public async Task<IEnumerable<Item>> Get()
-        {   var entity = await _itemRepository.Get();
-            if(entity.Count == 0) throw new ItemListEmptyException();
-            return entity;
-        }
-        public async Task Create(ItemDTO itemDTO)
+
+        public async Task<ItemDTO> GetItemByIdAsync(int id)
         {
-            var item = _mapper.Map<Item>(itemDTO);
-            await _itemRepository.Create(item);
+            var item = await _itemRepository.GetItemByIdAsync(id);
+            if (item == null) return null;
+
+            return new ItemDTO
+            {
+                Name = item.Name,
+                Price = item.Price,
+                ShopId = item.ShopId
+            };
         }
-        public async Task EditItem(ItemDTO itemDTO, int id)
+
+        public async Task<ItemDTO> CreateItemAsync(ItemDTO itemDto)
         {
-            var entity = await _itemRepository.Get(id);
-            if (entity == null) throw new ItemNotFoundException();
-            var item = _mapper.Map<Item>(itemDTO);
-            item.Id = id;
-            await _itemRepository.EditItem(item);
+            var newItem = new Item
+            {
+                Name = itemDto.Name,
+                Price = itemDto.Price,
+                ShopId = itemDto.ShopId
+            };
+
+            var createdItem = await _itemRepository.CreateItemAsync(newItem);
+
+            return new ItemDTO
+            {
+                Name = createdItem.Name,
+                Price = createdItem.Price,
+                ShopId = createdItem.ShopId
+            };
         }
-        public async Task Delete(int id)
+
+        public async Task UpdateItemAsync(int id, ItemDTO itemDto)
         {
-            var entity = await _itemRepository.Get(id);
-            if (entity == null) throw new ItemNotFoundException();
-            await _itemRepository.Delete(entity);
+            var item = await _itemRepository.GetItemByIdAsync(id);
+            if (item == null) throw new Exception("Item not found");
+
+            item.Name = itemDto.Name;
+            item.Price = itemDto.Price;
+            item.ShopId = itemDto.ShopId;
+
+            await _itemRepository.UpdateItemAsync(item);
+        }
+
+        public async Task DeleteItemAsync(int id)
+        {
+            await _itemRepository.DeleteItemAsync(id);
         }
     }
+
 }
+

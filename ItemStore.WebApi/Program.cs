@@ -23,12 +23,18 @@ builder.Services.AddTransient<IDbConnection>(sp => new NpgsqlConnection(connecti
 //builder.Services.AddDbContext<DataContext>(o => o.UseInMemoryDatabase("MyDatabase"));
 builder.Services.AddDbContext<DataContext>(o => o.UseNpgsql(connectionString));
 
+builder.Services.AddTransient<IItemRepository, ItemRepository>();
 builder.Services.AddTransient<IItemService, ItemService>();
 builder.Services.AddTransient<IEFCoreRepository, EFCoreRepository>();
+builder.Services.AddTransient<IShopRepository, ShopRepository>();
+builder.Services.AddTransient<IShopService, ShopService>();
+builder.Services.AddTransient<IPurchaseRepository , PurchaseRepository>();
+builder.Services.AddTransient<PurchaseService>();
 builder.Services.AddTransient<UserService>();
+
 builder.Services.AddAutoMapper(typeof(Program));
 
-builder.Services.AddTransient<JsonPlaceholderClient>();
+builder.Services.AddTransient<IJsonPlaceholderClient, JsonPlaceholderClient>();
 
 builder.Services.AddHttpClient();
 var app = builder.Build();

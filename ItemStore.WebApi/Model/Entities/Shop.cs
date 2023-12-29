@@ -1,10 +1,10 @@
 ﻿namespace ItemStore.WebApi.Model.Entities
 {
-    public class Item
+    public class Shop
     {
         public int Id { get; set; }
         public string ?Name { get; set; }
-        public decimal Price { get; set; }
-        public int? ShopId { get; set; }
+        public string ?Address { get; set; }
+        public List<Item> ?Items { get; set; }
     }
 }

@@ -13,30 +13,30 @@ namespace ItemStore.WebApi.Repositories
 
         public async Task<List<Item>> Get()
         {
-            return await _dataContext.Todos.ToListAsync();
+            return await _dataContext.Items.ToListAsync();
         }
         public async Task<Item> Get(int id)
         {
-            return await _dataContext.Todos.FirstOrDefaultAsync(t => t.Id == id);
+            return await _dataContext.Items.FirstOrDefaultAsync(t => t.Id == id);
         }
         public async Task Create(Item item)
         {
-            _dataContext.Todos.Add(item);
+            _dataContext.Items.Add(item);
             await _dataContext.SaveChangesAsync();
         }
         public async Task Update(Item item)
         {
-            _dataContext.Todos.Update(item);
+            _dataContext.Items.Update(item);
             await _dataContext.SaveChangesAsync();
         }
         public async Task EditItem(Item item)
         {
-            _dataContext.Todos.Update(item);
+            _dataContext.Items.Update(item);
             await _dataContext.SaveChangesAsync();
         }
         public async Task Delete(Item item)
         {
-            _dataContext.Todos.Remove(item);
+            _dataContext.Items.Remove(item);
             await _dataContext.SaveChangesAsync();
         }
     }
